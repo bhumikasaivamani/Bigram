@@ -1,4 +1,3 @@
-
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.Arrays;
@@ -10,21 +9,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
-
-/**
- *
- * @author bhumikasaivamani
- */
 public class Bigram 
 {
     Map<String,Integer> Vocabulary;
     Map<String,ColumnData> BigramCountTable;
-    //Map<String,ColumnData> BigramProbabilityTable;
     int bigramCount;
     Map<Integer,Integer> bigramCountMap;
     
@@ -34,10 +22,12 @@ public class Bigram
         Vocabulary=new HashMap<String,Integer>();
         BigramCountTable=new HashMap<String,ColumnData>();
         bigramCountMap = new HashMap<>();
-        
-        //BigramProbabilityTable=new HashMap<String,ColumnData>();
     }
  
+    /**
+     * Function Read the corpus and create vocabulary of words with its occurence
+     * @param path 
+     */
     public void ExtractData(String path)
     {
         try
@@ -78,6 +68,10 @@ public class Bigram
         System.out.println("");
     }
     
+    /**
+     * Function to create Bigram Count Table
+     * @param path 
+     */
     public void calculateBigramCounts(String path)
     {
         String previousWord="";
@@ -98,12 +92,6 @@ public class Bigram
                 while(token.hasMoreTokens())
                 {
                    String word=token.nextToken().trim().toLowerCase();
-                   
-                   /*if(word.equals("."))
-                   {
-                       previousWord="";
-                       continue;
-                   }*/
                    if(word.length()==1 && !word.equals("."))
                    {
                        word=word.replaceAll("[^a-zA-Z0-9]+","");
@@ -127,9 +115,10 @@ public class Bigram
             System.out.println(e);
         } 
         buildBigramCountMap();
-        //System.out.println(BigramCountTable.get("the").columnValues.get("."));
     }
-    
+    /**
+     * Function to create Bigram count Map,Where Key is bigram and Value is occurence
+     */
     public void buildBigramCountMap()
     {
         for(String key : BigramCountTable.keySet())
@@ -150,6 +139,10 @@ public class Bigram
         }
     }
     
+     /**
+     * Function to count total number of words in vocabulary
+     * @return 
+     */
     public int VocabularyWordCount()
     {
         int vCount=0;
@@ -159,33 +152,21 @@ public class Bigram
         }
         return vCount;
     }
-    /*
-    public void calculateBigramProbabilities()
-    {
-        int vCount=VocabularyWordCount();
-        for(String word:Vocabulary.keySet())
-        {
-          BigramProbabilityTable.put(word, new ColumnData(Vocabulary.keySet()));
-        }
-        for(String word:BigramCountTable.keySet())
-        {
-            for(String prevWord:BigramCountTable.get(word).columnValues.keySet())
-            {
-                double v=BigramCountTable.get(word).columnValues.get(prevWord);
-                if(v>0)
-                {
-                    double prob=(double)v/Vocabulary.get(prevWord);
-                    BigramProbabilityTable.get(word).columnValues.put(prevWord, prob);
-                }
-            }
-        }
-        System.out.println(BigramProbabilityTable.get("the").columnValues.get("from"));
-    }
-    */
     
+     /**
+     * Function to calculate Bigram probability.If the word does not exist returns 0
+     * @param word
+     * @param prevWord
+     * @return 
+     */
     public double getBigramProbability(String word,String prevWord)
     {
-        double v=BigramCountTable.get(word).columnValues.get(prevWord);
+        double v=0.0;
+        if(BigramCountTable.containsKey(word))
+        {
+            if(BigramCountTable.get(word).columnValues.containsKey(prevWord))
+                v=BigramCountTable.get(word).columnValues.get(prevWord);
+        }
         if(v>0)
         {
             double prob=(double)v/Vocabulary.get(prevWord);
@@ -194,27 +175,64 @@ public class Bigram
         return 0.0;
     }
     
+    /**
+     * Function to calculate Bigram Smoothing Probability(One Laplace Smoothing)
+     * @param word
+     * @param prevWord
+     * @return 
+     */
     public double getBigramSmoothingProbability(String word,String prevWord)
     {
-        double v=BigramCountTable.get(word).columnValues.get(prevWord);
-        double prob=(double)(v+1)/(Vocabulary.get(prevWord)+Vocabulary.size());
-        return prob;
+        double v=0.0;
+        double prob=0.0;
+        if(BigramCountTable.containsKey(word))
+        {
+            if(BigramCountTable.get(word).columnValues.containsKey(prevWord))
+                v=BigramCountTable.get(word).columnValues.get(prevWord);
+        }
+        else
+        {
+            v=1.0; //smoothing
+        }
+        if(Vocabulary.get(prevWord)!=null)
+        {
+             prob=(double)(v+1)/(Vocabulary.get(prevWord)+Vocabulary.size());
+        }
+        else
+        {
+           prob=(double)(v+1)/(1+Vocabulary.size()); 
+        }
         
+        return prob;
     }
     
+     /** 
+     * FUnction to calculate Good Turing Smoothing Probability
+     * @param word
+     * @param prevWord
+     * @return 
+     */
     public double getBigramGoodTuringProbability(String word,String prevWord)
     {
-        double cD=BigramCountTable.get(word).columnValues.get(prevWord);
+        double cD=0.0;
+        if(BigramCountTable.containsKey(word))
+        {
+            if(BigramCountTable.get(word).columnValues.containsKey(prevWord))
+                cD=BigramCountTable.get(word).columnValues.get(prevWord);
+        }
         int c = (int) cD;
         if(bigramCountMap.get(c+1)!=null)
         {
             double cStar=(double)(c+1)*bigramCountMap.get(c+1)/bigramCountMap.get(c);
             return (double)cStar/bigramCount;
         }
-            
         return 0.0;
     }
     
+    /**
+     * Function to print a table given array of words in a Sentence
+     * @param input 
+     */
     public void printTable(Map<String,ColumnData> input) {
         System.out.format("%-30s", "");
         List<String> keys = new LinkedList<>();
@@ -222,29 +240,24 @@ public class Bigram
         for(String key : input.keySet())
         {
             System.out.format("%-30s", key);
-            //System.out.print("\t\t");
         }
         System.out.println("");
         for(String key : input.keySet()){
-            
-            //System.out.print(key+"\t\t");
             System.out.format("%-30s", key);
-            //System.out.print("\t\t");
             for(int i=0;i<input.keySet().size(); i++){
                 String w = keys.get(i);
                 String val = Double.toString(input.get(w).columnValues.get(key));
-                //if(val.length()>7)
-                //    System.out.format("%-15s", val.substring(0, 7));
-                //else
-                    System.out.format("%-30s", val);
-                //System.out.printf("%.5f",input.get(w).columnValues.get(key));
-                //System.out.print("\t\t");
+                System.out.format("%-30s", val);
             }
             System.out.println("");
         }
         
     }
     
+     /**
+     * Function to Construct Bigram Count Table given sentence
+     * @param sentence 
+     */
     public void constructBigramCountTable(String sentence)
     {
         Map<String,ColumnData> sentenceBigramProbTable=new HashMap<>();
@@ -255,15 +268,28 @@ public class Bigram
             ColumnData d=new ColumnData(minimizedSet);
             for(int j=0;j<segments.length;j++)
             {
-                d.columnValues.put(segments[j],BigramCountTable.get(segments[i]).columnValues.get(segments[j]));
+                if(BigramCountTable.containsKey(segments[i]))
+                {
+                    if(BigramCountTable.get(segments[i]).columnValues.containsKey(segments[j]))
+                    {
+                        d.columnValues.put(segments[j],BigramCountTable.get(segments[i]).columnValues.get(segments[j]));
+                    }
+                    else
+                    {
+                     d.columnValues.put(segments[j],0.0);   
+                    }
+                }
             }
             sentenceBigramProbTable.put(segments[i].trim().toLowerCase(),d);
         }
         printTable(sentenceBigramProbTable);
-    
         
     }
     
+    /**
+     * Function to Construct Bigram Probabilities Table given sentence
+     * @param sentence 
+     */
     public void constructBigramProbabilitiesTable(String sentence)
     {
         Map<String,ColumnData> sentenceBigramCountTable=new HashMap<>();
@@ -281,6 +307,10 @@ public class Bigram
         printTable(sentenceBigramCountTable);
     }
     
+    /**
+     * Function to Construct Bigram Probabilites Table with one laplace Smoothing ,given sentence as input
+     * @param sentence 
+     */
     public void constructBigramSmoothingProbabilitiesTable(String sentence)
     {
         Map<String,ColumnData> sentenceBigramCountTable=new HashMap<>();
@@ -298,6 +328,10 @@ public class Bigram
         printTable(sentenceBigramCountTable);
     }
     
+     /**
+     * Function to Construct Bigram Probabilites Table with Good Turing ,given sentence as input
+     * @param sentence 
+     */
     public void constructBigramGoodTuringProbabilitiesTable(String sentence)
     {
         Map<String,ColumnData> sentenceBigramCountTable=new HashMap<>();
@@ -315,6 +349,11 @@ public class Bigram
         printTable(sentenceBigramCountTable);
     }
     
+     /**
+     * Function to calculate Total Probability given sentence
+     * @param sentence
+     * @return 
+     */
     public double calculateTotalProbability(String sentence) {
         double totalProb = 1;
         String [] segments=sentence.toLowerCase().split(" ");
@@ -323,26 +362,22 @@ public class Bigram
                 double p = getBigramProbability(segments[i],".");
                 if(p>0)
                     totalProb = totalProb * p;
-                else
-                {
-                    //handle this
-                }
             }
             else
             {
                 double p = getBigramProbability(segments[i],segments[i-1]);
                 if(p>0)
                     totalProb = totalProb * p;
-                else
-                {
-                    //handle this
-                }
-            }
-            
+           }
         }
         return totalProb;
     }
     
+      /**
+     * Function to calculate Total Probability with one laplace smoothing given sentence
+     * @param sentence
+     * @return 
+     */
     public double calculateTotalSmoothingProbability(String sentence) {
         double totalProb = 1;
         String [] segments=sentence.toLowerCase().split(" ");
@@ -351,26 +386,22 @@ public class Bigram
                 double p = getBigramSmoothingProbability(segments[i],".");
                 if(p>0)
                     totalProb = totalProb * p;
-                else
-                {
-                    //handle this
-                }
             }
             else
             {
                 double p = getBigramSmoothingProbability(segments[i],segments[i-1]);
                 if(p>0)
                     totalProb = totalProb * p;
-                else
-                {
-                    //handle this
-                }
             }
-            
         }
         return totalProb;
     }
     
+     /**
+     * Function to calculate Total Probability with Go0d Turing Smoothing given sentence
+     * @param sentence
+     * @return 
+     */
     public double calculateGoodTuringProbability(String sentence) {
         double totalProb = 1;
         String [] segments=sentence.toLowerCase().split(" ");
@@ -379,20 +410,12 @@ public class Bigram
                 double p = getBigramGoodTuringProbability(segments[i],".");
                 if(p>0)
                     totalProb = totalProb * p;
-                else
-                {
-                    //handle this
-                }
-            }
+           }
             else
             {
                 double p = getBigramGoodTuringProbability(segments[i],segments[i-1]);
                 if(p>0)
                     totalProb = totalProb * p;
-                else
-                {
-                    //handle this
-                }
             }
             
         }
@@ -401,41 +424,102 @@ public class Bigram
     
     public static void main(String args[])
     {
-        String sentence1 = "The company chairman said he will increase the profit next year .";
+        //String corpusPath="/Users/bhumikasaivamani/corpus.txt";
+        //String inputFilePath="/Users/bhumikasaivamani/input.txt";
+        
+        String corpusPath=args[0];
+        String inputFilePath=args[1];
+        
         Bigram b=new Bigram();
-        b.ExtractData("/Users/bhumikasaivamani/corpus.txt");
-        b.calculateBigramCounts("/Users/bhumikasaivamani/corpus.txt");
-        b.constructBigramCountTable(sentence1);
-        b.constructBigramProbabilitiesTable(sentence1);
-        System.out.println("Total Probability : "+b.calculateTotalProbability(sentence1));
+        b.ExtractData(corpusPath);
+        b.calculateBigramCounts(corpusPath);
         
+        int count=0;
+        double maxprobWithoutSmoothing=0.0;
+        double maxprobWithSmoothing=0.0;
+        double maxprobGoodTuring=0.0;
         
-        b.constructBigramSmoothingProbabilitiesTable(sentence1);
-        System.out.println("Total Probability : "+b.calculateTotalSmoothingProbability(sentence1));
+        String outSentenceWithoutSmoothing=null;
+        String outSentenceWithSmoothing=null;
+        String outSentenceGoodTurning=null;
         
-        b.constructBigramGoodTuringProbabilitiesTable(sentence1);
-        System.out.println("Total Probability : "+b.calculateGoodTuringProbability(sentence1));
-        //System.out.println(b.getBigramProbability("the","from"));
-        //b.calculateBigramProbabilities();
-        /*Set cols = new HashSet<>();
-        cols.add("the");
-        cols.add("car");
-        cols.add("plane");cols.add("he");cols.add("will");
-        cols.add("not");
-        cols.add("eat");
+        try
+        {
+            FileReader reader=new FileReader(inputFilePath);
+            BufferedReader br=new BufferedReader(reader);
+            String sentence=br.readLine();
+            while(sentence!=null)
+            {
+                count++;
+                System.out.println("\n\tSENTENCE "+count);
+                System.out.println("********************");
+                System.out.println("Bigram Count Table");
+                System.out.println("********************");
+                b.constructBigramCountTable(sentence);
+                
+                System.out.println("**************************************");
+                System.out.println("Probabilities Table(Without Smoothing)");
+                System.out.println("**************************************");
+                b.constructBigramProbabilitiesTable(sentence);
+                
+                System.out.println("\n**************************************");
+                System.out.println("Probabilities Table(With Smoothing)");
+                System.out.println("**************************************");
+                b.constructBigramSmoothingProbabilitiesTable(sentence);
+                
+                System.out.println("\n**************************************");
+                System.out.println("Probabilities Table(Good Turing)");
+                System.out.println("**************************************");
+                System.out.println("****Bigram Good Turing Probabilities Table - Sentence 1****");
+                b.constructBigramGoodTuringProbabilitiesTable(sentence);
+                
+                double probWithoutSmoothing=b.calculateTotalProbability(sentence);
+                double probWithSmoothing=b.calculateTotalSmoothingProbability(sentence);
+                double probGoodTuring=b.calculateGoodTuringProbability(sentence);
+                System.out.println("\n\n\t**********************************************");
+                System.out.println("\tProbability of Sentence (Without Smoothing): "+probWithoutSmoothing);
+                System.out.println("\tProbability of Sentence (With Smoothing): "+probWithSmoothing);
+                System.out.println("\tProbability of Sentence (Good Turing): "+probGoodTuring);
+                System.out.println("\t**********************************************");
+                
+                if(probWithoutSmoothing>maxprobWithoutSmoothing)
+                {
+                    maxprobWithoutSmoothing=probWithoutSmoothing;
+                    outSentenceWithoutSmoothing=sentence;
+                }
+                if(probWithSmoothing>maxprobWithSmoothing)
+                {
+                    maxprobWithSmoothing=probWithSmoothing;
+                    outSentenceWithSmoothing=sentence;
+                }
+                if(probGoodTuring>maxprobGoodTuring)
+                {
+                    maxprobGoodTuring=probGoodTuring;
+                    outSentenceGoodTurning=sentence;
+                }
+                sentence=br.readLine();
+                
+                System.out.println("\n\n");
+            }
+            System.out.println("\n\n***********************");
+            System.out.println("Maximum Probabilities");
+            System.out.println("***********************");
+            System.out.println("Without Smoothing: "+maxprobWithoutSmoothing);
+            System.out.println("With Smoothing: "+maxprobWithSmoothing);
+            System.out.println("Good Turing : "+maxprobGoodTuring);
+            
+            System.out.println("\n********************");
+            System.out.println("Probable Sentences");
+            System.out.println("********************");
+            System.out.println("Without Smoothing: "+outSentenceWithoutSmoothing);
+            System.out.println("With Smoothing: "+outSentenceWithSmoothing);
+            System.out.println("Good Turing : "+outSentenceGoodTurning);
+        }
+        catch(Exception e)
+        {}
         
-        
-        Map<String,ColumnData> testMap = new HashMap<>();
-        testMap.put("the", new ColumnData(cols));
-        testMap.put("car", new ColumnData(cols));
-        testMap.put("plane", new ColumnData(cols));
-        testMap.put("he", new ColumnData(cols));
-        testMap.put("will", new ColumnData(cols));
-        testMap.put("not", new ColumnData(cols));
-        testMap.put("eat", new ColumnData(cols));
-        
-        b.printTable(testMap);
-        */
     }
     
 }
+ 
+
